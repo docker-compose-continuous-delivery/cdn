@@ -2,26 +2,35 @@ version: "3.9"
 
 services:
 
-  hello-world:
-    image: "traefik/whoami"
-    container_name: "simple-service"
+  nginx-cdn:
+    image: "nginx:stable-alpine"
+    container_name: "nginx-cdn"
     restart: unless-stopped
+    volumes:
+      - public:/usr/share/nginx/html:ro
     networks:
       - traefik
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.simple-service.rule=Host(`hello-world.${BASE_DOMAIN:-ozeliurs.com}`)"
+      - "traefik.http.routers.simple-service.rule=Host(`cdn.${BASE_DOMAIN:-ozeliurs.com}`)"
       - "traefik.http.routers.simple-service.entrypoints=websecure"
       - "traefik.http.routers.simple-service.tls=true"
       - "traefik.http.routers.simple-service.tls.certresolver=cloudflare"
       - "traefik.http.services.simple-service.loadbalancer.server.port=80"
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:80" ]
+      test: [ "CMD", "wget", "-q", "http://localhost:80", "-O", "-" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
-
 networks:
   traefik:
     external: true
+
+volumes:
+  public:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.1.126,nolock,soft,rw
+      device: ":/mnt/user/Public"
